@@ -2,7 +2,6 @@ document.addEventListener('DOMContentLoaded', () => {
     function loadSettings() {
         chrome.storage.local.get('fbcs_settings', (result) => {
             const s = result.fbcs_settings || {};
-            // Глобальные
             document.getElementById('enableSid').checked = s.enableSid !== false;
             document.getElementById('enableId').checked = s.enableId !== false;
             document.getElementById('enableFloat').checked = s.enableFloat !== false;
@@ -28,7 +27,7 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('floatMW').value = s.floatColors?.MW || '#ff9500';
             document.getElementById('floatFT').value = s.floatColors?.FT || '#ff3b30';
             document.getElementById('floatWW').value = s.floatColors?.WW || '#8e8e93';
-            document.getElementById('floatBS').value = s.floatColors?.BS || '#5856d6';
+
 
             document.getElementById('hideHoverContent').checked = s.hideHoverContent || false;
         });
@@ -40,7 +39,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const rareSids = rareSidsStr.split(',').map(s => parseInt(s.trim(), 10)).filter(n => !isNaN(n));
 
         const newSettings = {
-            // Глобальные
             enableSid: document.getElementById('enableSid').checked,
             enableId: document.getElementById('enableId').checked,
             enableFloat: document.getElementById('enableFloat').checked,
@@ -68,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 MW: document.getElementById('floatMW').value,
                 FT: document.getElementById('floatFT').value,
                 WW: document.getElementById('floatWW').value,
-                BS: document.getElementById('floatBS').value
+
             }
 
 
