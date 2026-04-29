@@ -1,11 +1,25 @@
-// inject.js – обновлённая версия с кружком StatTrak (звездочка)
 (function () {
     if (window.__fbcsCore) return;
-    window.__fbcsCore = { debug: true };
+    window.__fbcsCore = { debug: false };
 
-    const log = (...args) => {
-        if (window.__fbcsCore.debug) console.log('[FBCS]', ...args);
+    const OriginalWebSocket = window.WebSocket;
+    window.WebSocket = function (...args) {
+        const ws = new OriginalWebSocket(...args);
+        ws.addEventListener('message', function (event) {
+            if (typeof event.data !== 'string') return;
+            if (!event.data.startsWith('42')) return;
+            try {
+                const parsed = JSON.parse(event.data.substring(2));
+                window.postMessage({ type: 'FBCS_WS_MESSAGE', data: parsed }, '*');
+            } catch (e) {}
+        });
+        return ws;
     };
+    window.WebSocket.CONNECTING = OriginalWebSocket.CONNECTING;
+    window.WebSocket.OPEN = OriginalWebSocket.OPEN;
+    window.WebSocket.CLOSING = OriginalWebSocket.CLOSING;
+    window.WebSocket.CLOSED = OriginalWebSocket.CLOSED;
+    window.WebSocket.prototype = OriginalWebSocket.prototype;
 
     function hexToRgb(hex) {
         const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
@@ -20,7 +34,6 @@
 
     const style = document.createElement('style');
     style.textContent = `
-/* Базовый класс для всех бейджей */
 .fbcs-badge {
     position: absolute;
     z-index: 50;
@@ -30,7 +43,6 @@
     white-space: nowrap;
     text-align: center;
 }
-/* SID – правый верхний */
 .fbcs-sid-badge {
     top: 6px;
     right: 6px;
@@ -40,7 +52,6 @@
     background: #95a5a6;
     color: #fff;
 }
-/* Float – справа под SID */
 .fbcs-float-badge {
     bottom: 6px;
     right: 6px;
@@ -50,7 +61,6 @@
     background: #34495e;
     color: #fff;
 }
-/* ID – Слева в верху */
 .fbcs-id-badge {
     top: 6px;
     left: 6px;
@@ -60,7 +70,6 @@
     background: #9b59b6;
     color: #fff;
 }
-/* StatTrak – кружок со звездой, справа под SID */
 .fbcs-st-badge {
     top: 33px;
     right: 6px;
@@ -75,13 +84,12 @@
     color: #fff;
 }
 .fbcs-st-badge.fbcs-st-no-float {
-    top: 4px;
+    bottom: 6px;
+    right: 6px;
 }
-/* Анимация для редких SID */
 .fbcs-rare-glow-sid {
     animation: rareGlowSid 2s ease-in-out infinite;
 }
-/* Анимация для редких ID */
 .fbcs-rare-glow-id {
     animation: rareGlowId 2.5s ease-in-out infinite;
 }
@@ -104,11 +112,23 @@ body.fbcs-hide-hover .hoverContent {
     display: none !important;
 }
 `;
-    document.head.appendChild(style);
 
-    // ================= NORMALIZATION =================
-    const floatMap = {1:'FN',2:'MW',3:'FT',4:'WW',5:'BS'};
+    function addStyles() {
+        if (!document.head) {
+            const observer = new MutationObserver(() => {
+                if (document.head) {
+                    observer.disconnect();
+                    addStyles();
+                }
+            });
+            observer.observe(document.documentElement, { childList: true });
+            return;
+        }
+        document.head.appendChild(style);
+    }
+    addStyles();
 
+    const floatMap = {1:'FN',2:'MW',3:'FT',4:'WW'};
     function normalizeItem(raw) {
         return {
             itemId: String(raw.itemId ?? raw.item_id ?? raw.id ?? ''),
@@ -121,12 +141,10 @@ body.fbcs-hide-hover .hoverContent {
             floatName: floatMap[raw.float] || '',
             sid: raw.sid,
             price: raw.price,
-            isStattrack: !!raw.isStattrack,
-            src: raw.src
+            isStattrack: !!raw.isStattrack
         };
     }
 
-    // ================= SETTINGS (по умолчанию) =================
     let settings = {
         enableSid: true,
         enableFloat: true,
@@ -147,8 +165,7 @@ body.fbcs-hide-hover .hoverContent {
             'FN': '#4cd964',
             'MW': '#ff9500',
             'FT': '#ff3b30',
-            'WW': '#8e8e93',
-            'BS': '#5856d6'
+            'WW': '#8e8e93'
         }
     };
 
@@ -158,18 +175,47 @@ body.fbcs-hide-hover .hoverContent {
             settings = { ...settings, ...event.data.settings };
             applySettingsToBadges();
         }
+        if (event.data.type === 'FBCS_WS_MESSAGE') {
+            const parsed = event.data.data;
+            if (parsed[0] !== 'marketUpdate') return;
+            const { action, item } = parsed[1];
+            applyWsAction(action, item);
+        }
     });
 
-    function applySettingsToBadges() {
-        document.querySelectorAll('div.sc-jOdwRd').forEach(processCard);
-        if (settings.hideHoverContent) {
-            document.body.classList.add('fbcs-hide-hover');
-        } else {
-            document.body.classList.remove('fbcs-hide-hover');
+    function applyWsAction(action, item) {
+        if (activeTab === 'market') {
+            if (action === 'ADD' || action === 'UPDATE') Storage.upsert(item);
+            if (action === 'DELETE') Storage.remove(item);
+        }
+        if (activeTab === 'selling') {
+            if (action === 'UPDATE') Storage.upsert(item);
+            if (action === 'DELETE') Storage.remove(item);
+        }
+        if (activeTab === 'inventory') {
+            if (action === 'ADD') Storage.remove(item);
         }
     }
 
-    // ================= TAB =================
+    function applySettingsToBadges() {
+        document.querySelectorAll('div.sc-jOdwRd').forEach(processCard);
+        if (document.body) {
+            if (settings.hideHoverContent) {
+                document.body.classList.add('fbcs-hide-hover');
+            } else {
+                document.body.classList.remove('fbcs-hide-hover');
+            }
+        } else {
+            const observer = new MutationObserver(() => {
+                if (document.body) {
+                    observer.disconnect();
+                    applySettingsToBadges();
+                }
+            });
+            observer.observe(document.documentElement, { childList: true });
+        }
+    }
+
     function detectActiveTab() {
         const url = location.pathname;
         if (url.includes('/profile/') && url.includes('/inventory')) return 'inventory';
@@ -182,12 +228,11 @@ body.fbcs-hide-hover .hoverContent {
             if (t === 'В продаже') return 'selling';
             if (t === 'История') return 'history';
         }
-        return null;
+        return 'market';
     }
 
     let activeTab = detectActiveTab();
 
-    // ================= STORAGE =================
     const Storage = (() => {
         let items = [];
         let map = new Map();
@@ -198,7 +243,6 @@ body.fbcs-hide-hover .hoverContent {
             map.clear();
             newItems.forEach(i => map.set(i.itemId, i));
             notify();
-            log('SET', items.length);
         }
 
         function upsert(raw) {
@@ -229,7 +273,6 @@ body.fbcs-hide-hover .hoverContent {
             items = [];
             map.clear();
             notify();
-            log('CLEAR');
         }
 
         function get() { return items; }
@@ -243,10 +286,9 @@ body.fbcs-hide-hover .hoverContent {
         document.querySelectorAll('div.sc-jOdwRd').forEach(processCard);
     });
 
-    // ================= DOM PARSER =================
     function parseCard(card) {
-        const weapon = card.querySelector('.sc-jbvGK')?.textContent.trim();
-        const skin = card.querySelector('.sc-ceBarN')?.childNodes[0]?.textContent.trim();
+        const weapon = card.querySelector('.sc-jbvGK')?.textContent.trim() || '';
+        const skin = card.querySelector('.sc-ceBarN')?.childNodes[0]?.textContent.trim() || '';
         const price = parseInt(card.querySelector('.bLtkdH')?.textContent.replace(/\D/g,'')) || null;
 
         let itemId = null;
@@ -264,7 +306,6 @@ body.fbcs-hide-hover .hoverContent {
         return { weapon, skin, price, floatName, sid, itemId };
     }
 
-    // ================= MATCH =================
     function matchItem(dom, storage) {
         if (dom.itemId) {
             const exact = Storage.getById(dom.itemId);
@@ -275,22 +316,31 @@ body.fbcs-hide-hover .hoverContent {
         let bestScore = 0;
         for (const item of storage) {
             let score = 0;
-            if (dom.weapon === item.weapon) score += 3;
+            if (dom.weapon && item.weapon && dom.weapon === item.weapon) score += 3;
             if (dom.skin === item.skin) score += 3;
-            if (dom.price === item.price) score += 2;
+            if (dom.price && item.price && dom.price === item.price) score += 2;
             if (dom.floatName === item.floatName) score += 2;
-            if (dom.sid === item.sid) score += 6;
+            if (dom.sid !== null && dom.sid !== undefined && !isNaN(dom.sid) &&
+                item.sid !== null && item.sid !== undefined &&
+                dom.sid === item.sid) score += 6;
             if (score > bestScore) {
                 bestScore = score;
                 best = item;
             }
         }
-        return bestScore >= 6 ? best : null;
+        return bestScore >= 4 ? best : null;
     }
 
-    // ================= BADGES HELPERS =================
     function cleanupBadges(card) {
         card.querySelectorAll('.fbcs-badge').forEach(e => e.remove());
+    }
+
+    function resetAllBadges() {
+        document.querySelectorAll('div.sc-jOdwRd').forEach(card => {
+            cleanupBadges(card);
+            card.__itemId = null;
+            card.__hash = null;
+        });
     }
 
     function formatSid(sid) {
@@ -302,7 +352,7 @@ body.fbcs-hide-hover .hoverContent {
     }
 
     function isSidRare(sid) {
-        if (!sid) return false;
+        if (!sid && sid !== 0) return false;
         const intVal = Math.round(parseFloat(sid) * 1000);
         return settings.rareSids.includes(intVal);
     }
@@ -321,7 +371,6 @@ body.fbcs-hide-hover .hoverContent {
         card.__itemId = item.itemId;
         card.style.position = 'relative';
 
-        // --- Анимация для редких SID (если включена) ---
         const isRareSid = isSidRare(item.sid);
         if (isRareSid && settings.sidRareAnimate) {
             card.classList.add('fbcs-rare-glow-sid');
@@ -336,7 +385,6 @@ body.fbcs-hide-hover .hoverContent {
             card.style.removeProperty('animation-delay');
         }
 
-        // --- Анимация для редких ID (если включена) ---
         const isRareId = isIdRare(item.itemId);
         if (isRareId && settings.idRareAnimate) {
             card.classList.add('fbcs-rare-glow-id');
@@ -350,7 +398,6 @@ body.fbcs-hide-hover .hoverContent {
             card.style.removeProperty('--glow-color-id');
         }
 
-        // ----- SID BADGE -----
         if (settings.enableSid) {
             const sidFormatted = formatSid(item.sid);
             const shouldShow = settings.sidShowAll || (!settings.sidShowAll && isRareSid);
@@ -370,7 +417,6 @@ body.fbcs-hide-hover .hoverContent {
             card.querySelector('.fbcs-sid-badge')?.remove();
         }
 
-        // ----- FLOAT BADGE -----
         let hasFloat = false;
         if (settings.enableFloat && item.floatName) {
             hasFloat = true;
@@ -386,7 +432,6 @@ body.fbcs-hide-hover .hoverContent {
             card.querySelector('.fbcs-float-badge')?.remove();
         }
 
-        // ----- STATTRAK BADGE (круг со звездой) -----
         if (settings.enableSt && item.isStattrack) {
             let stEl = card.querySelector('.fbcs-st-badge');
             if (!stEl) {
@@ -394,7 +439,7 @@ body.fbcs-hide-hover .hoverContent {
                 stEl.className = 'fbcs-st-badge fbcs-badge';
                 card.appendChild(stEl);
             }
-            stEl.textContent = '★';  // символ звезды
+            stEl.textContent = '★';
             if (hasFloat) {
                 stEl.classList.remove('fbcs-st-no-float');
             } else {
@@ -404,7 +449,6 @@ body.fbcs-hide-hover .hoverContent {
             card.querySelector('.fbcs-st-badge')?.remove();
         }
 
-        // ----- ID BADGE -----
         if (settings.enableId && item.itemId) {
             const isRareIdLocal = isIdRare(item.itemId);
             const shouldShow = settings.idShowAll || (!settings.idShowAll && isRareIdLocal);
@@ -425,7 +469,6 @@ body.fbcs-hide-hover .hoverContent {
         }
     }
 
-    // ================= CARD PROCESS =================
     function processCard(card) {
         const hash = card.innerText;
         if (card.__hash === hash && card.__itemId) return;
@@ -442,10 +485,8 @@ body.fbcs-hide-hover .hoverContent {
             document.querySelectorAll('div.sc-jOdwRd').forEach(processCard);
         });
         obs.observe(document.body, { childList: true, subtree: true });
-        log('DOM observer started');
     }
 
-    // ================= API HANDLERS =================
     function extractItems(data) {
         if (!data) return null;
         if (Array.isArray(data)) return data;
@@ -464,24 +505,24 @@ body.fbcs-hide-hover .hoverContent {
         if (!type) return;
 
         const items = extractItems(data);
-        if (!items) {
-            log('NO ITEMS STRUCTURE', type);
-            return;
-        }
+        if (!items) return;
 
-        log('API HIT', type, 'items:', items.length);
         if (type === 'history') {
+            resetAllBadges();
             Storage.clear();
             return;
         }
-        if (type !== activeTab) {
-            log('SKIP wrong tab', type, 'active:', activeTab);
-            return;
+
+        if (type !== activeTab) return;
+
+        if (type === 'selling' || type === 'inventory') {
+            resetAllBadges();
+            Storage.clear();
         }
+
         Storage.setAll(items);
     }
 
-    // ================= INTERCEPTORS =================
     const origFetch = window.fetch;
     window.fetch = async function (...args) {
         const res = await origFetch.apply(this, args);
@@ -519,53 +560,15 @@ body.fbcs-hide-hover .hoverContent {
         return send.apply(this, args);
     };
 
-    // ================= WEBSOCKET =================
-    const WS = window.WebSocket;
-    window.WebSocket = function (...args) {
-        const ws = new WS(...args);
-        ws.addEventListener('message', e => {
-            if (typeof e.data !== 'string') return;
-            if (!e.data.startsWith('42')) return;
-            try {
-                const parsed = JSON.parse(e.data.slice(2));
-                if (parsed[0] !== 'marketUpdate') return;
-                const { action, item } = parsed[1];
-                if (activeTab === 'market') {
-                    if (action === 'ADD' || action === 'UPDATE') Storage.upsert(item);
-                    if (action === 'DELETE') Storage.remove(item);
-                }
-                if (activeTab === 'selling') {
-                    if (action === 'UPDATE') Storage.upsert(item);
-                    if (action === 'DELETE') Storage.remove(item);
-                }
-                if (activeTab === 'inventory') {
-                    if (action === 'ADD') Storage.remove(item);
-                }
-            } catch {}
-        });
-        return ws;
-    };
-    window.WebSocket.prototype = WS.prototype;
-
-    // ================= TAB WATCH =================
     function updateTab() {
         const newTab = detectActiveTab();
         if (newTab !== activeTab) {
-            log('TAB', activeTab, '→', newTab);
             activeTab = newTab;
+            resetAllBadges();
             Storage.clear();
-            document.querySelectorAll('div.sc-jOdwRd').forEach(card => {
-                cleanupBadges(card);
-                card.__itemId = null;
-                card.__hash = null;
-            });
-            setTimeout(() => {
-                document.querySelectorAll('div.sc-jOdwRd').forEach(processCard);
-            }, 200);
         }
     }
 
-    // ================= INIT =================
     function waitForBody(cb) {
         if (document.body) return cb();
         const observer = new MutationObserver(() => {
@@ -581,6 +584,5 @@ body.fbcs-hide-hover .hoverContent {
         const tabObserver = new MutationObserver(updateTab);
         tabObserver.observe(document.body, { childList: true, subtree: true });
         startObserver();
-        log('CORE READY');
     });
 })();
