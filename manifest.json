@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "67-CS",
-  "version": "1.0",
+  "name": "FBCS-BB",
+  "version": "2.0.2",
   "description": "FB-CS But better",
 
   "permissions": ["storage", "tabs"],
@@ -16,6 +16,15 @@
         "*://*.fb-cs.ru/*",
         "*://fb-cs.ru/*"
       ],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "*://*.fb-cs.ru/*",
+        "*://fb-cs.ru/*"
+      ],
       "js": ["content.js"],
       "run_at": "document_start"
     }
@@ -23,7 +32,7 @@
 
   "web_accessible_resources": [
     {
-      "resources": ["inject.js"],
+      "resources": [],
       "matches": ["*://*/*"]
     }
   ],
