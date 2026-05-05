@@ -5,17 +5,17 @@
 
 📥 **Установка** приложения:
 
-• Рекомендуется ознакомится с Оригинальной инструкцией по установке и использованию программы [https://github.com/quoid/userscripts?tab=readme-ov-file#readme]    
+Рекомендуется ознакомится с Оригинальной инструкцией по установке и использованию программы [https://github.com/quoid/userscripts?tab=readme-ov-file#readme]    
 
-• На iPhone / iPad / Mac откройте App Store и скачайте приложение Userscripts.    
+На iPhone / iPad / Mac откройте App Store и скачайте приложение Userscripts.    
 
-• Откройте приложение, выберите папку где будут располагаться скрипты.        
+Откройте приложение, выберите папку где будут располагаться скрипты.        
 
-• Добавте в эту папку файл скачанный из этой ветки FBCS-BB-for-Safari:    
+Добавте в эту папку файл скачанный из этой ветки FBCS-BB-for-Safari:    
 
-_FBCS-BB_For_iOS_Safari.user.js – урезанная версия для iOS и MacOS (не поддерживает работу с api и soket, работает только с данными Dom)._
+FBCS-BB_For_iOS_Safari.user.js – урезанная версия для iOS и MacOS (не поддерживает работу с api и soket, работает только с данными Dom).
 
-_FBCS-BB_For_MacOS_Safari.user.js – почти полный аналог основной версии FBCS-BB-for-Chrome, работает только на Mac._
+FBCS-BB_For_MacOS_Safari.user.js – почти полный аналог основной версии FBCS-BB-for-Chrome, работает только на Mac.
 
 
 **Активация в Safari iOS / iPadOS**   
