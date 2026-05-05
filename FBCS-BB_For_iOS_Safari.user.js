@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FBCS-BB For iOS
 // @version      1.0
-// @description  SID, Float, ID, StatTrak на карточках fb-cs.ru с настройками через #fbcs-settings
+// @description  FB-CS But better (Safari iPhone)
 // @author       fakuverymuch
 // @match        *://*.fb-cs.ru/*
 // @match        *://fb-cs.ru/*
