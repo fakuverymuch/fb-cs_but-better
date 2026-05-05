@@ -362,13 +362,18 @@ body.fbcs-hide-hover .hoverContent {
         return !isNaN(idNum) && idNum < settings.rareIdsThreshold;
     }
 
-    function renderBadges(card, item) {
-        if (!item) return;
+    function renderBadges(card, data) {
+    
+        card.querySelectorAll('.fbcs-badge').forEach(el => el.remove());
+        card.classList.remove('fbcs-rare-glow-sid', 'fbcs-rare-glow-id');
+        card.style.removeProperty('--glow-color-sid');
+        card.style.removeProperty('--glow-color-id');
+        card.style.removeProperty('animation-delay');
 
-        if (card.__itemId && card.__itemId !== item.itemId) {
-            cleanupBadges(card);
+        if (!data) {
+            card.style.position = '';
+            return;
         }
-        card.__itemId = item.itemId;
         card.style.position = 'relative';
 
         const isRareSid = isSidRare(item.sid);
