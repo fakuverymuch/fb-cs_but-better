@@ -362,18 +362,13 @@ body.fbcs-hide-hover .hoverContent {
         return !isNaN(idNum) && idNum < settings.rareIdsThreshold;
     }
 
-    function renderBadges(card, data) {
-    
-        card.querySelectorAll('.fbcs-badge').forEach(el => el.remove());
-        card.classList.remove('fbcs-rare-glow-sid', 'fbcs-rare-glow-id');
-        card.style.removeProperty('--glow-color-sid');
-        card.style.removeProperty('--glow-color-id');
-        card.style.removeProperty('animation-delay');
+    function renderBadges(card, item) {
+        if (!item) return;
 
-        if (!data) {
-            card.style.position = '';
-            return;
+        if (card.__itemId && card.__itemId !== item.itemId) {
+            cleanupBadges(card);
         }
+        card.__itemId = item.itemId;
         card.style.position = 'relative';
 
         const isRareSid = isSidRare(item.sid);
@@ -485,23 +480,23 @@ body.fbcs-hide-hover .hoverContent {
     }
 
     function startObserver() {
-    if (!document.body) return;
-    let redrawTimeout;
-    const observer = new MutationObserver(() => {
-        clearTimeout(redrawTimeout);
-        redrawTimeout = setTimeout(() => {
-            document.querySelectorAll('div.sc-jOdwRd').forEach(card => {
-                card.dataset.fbcsProcessed = '0';
-                processCard(card);
-            });
-        }, 50);
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
-    document.querySelectorAll('div.sc-jOdwRd').forEach(card => {
-        card.dataset.fbcsProcessed = '0';
-        processCard(card);
-    });
-}
+        if (!document.body) return;
+        let redrawTimeout;
+        const observer = new MutationObserver(() => {
+            clearTimeout(redrawTimeout);
+            redrawTimeout = setTimeout(() => {
+                document.querySelectorAll('div.sc-jOdwRd').forEach(card => {
+                    card.dataset.fbcsProcessed = '0';
+                    processCard(card);
+                });
+            }, 50);
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+        document.querySelectorAll('div.sc-jOdwRd').forEach(card => {
+            card.dataset.fbcsProcessed = '0';
+            processCard(card);
+        });
+    }
 
     function extractItems(data) {
         if (!data) return null;
