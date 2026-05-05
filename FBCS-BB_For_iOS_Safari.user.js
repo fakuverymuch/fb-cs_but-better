@@ -436,11 +436,22 @@
     }
 
     function startObserver() {
+        if (!document.body) return;
+        let redrawTimeout;
         const observer = new MutationObserver(() => {
-            document.querySelectorAll('div.sc-jOdwRd:not([data-fbcs-processed="1"])').forEach(processCard);
+            clearTimeout(redrawTimeout);
+            redrawTimeout = setTimeout(() => {
+                document.querySelectorAll('div.sc-jOdwRd').forEach(card => {
+                    card.dataset.fbcsProcessed = '0';
+                    processCard(card);
+                });
+            }, 50);
         });
         observer.observe(document.body, { childList: true, subtree: true });
-        document.querySelectorAll('div.sc-jOdwRd').forEach(processCard);
+        document.querySelectorAll('div.sc-jOdwRd').forEach(card => {
+            card.dataset.fbcsProcessed = '0';
+            processCard(card);
+        });
     }
 
     function createSettingsModal() {
