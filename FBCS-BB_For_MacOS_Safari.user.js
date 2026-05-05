@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         FBCS-BB For MacOS
 // @version      1.0
-// @description  FB-CS But better (Safari Mac)
+// @description  FB-CS But Better
 // @author       fakuverymuch
 // @match        *://*.fb-cs.ru/*
 // @match        *://fb-cs.ru/*
@@ -334,11 +334,21 @@
 
     function startObserver() {
         if (!document.body) return;
+        let redrawTimeout;
         const observer = new MutationObserver(() => {
-            document.querySelectorAll('div.sc-jOdwRd:not([data-fbcs-processed="1"])').forEach(processCard);
+            clearTimeout(redrawTimeout);
+            redrawTimeout = setTimeout(() => {
+                document.querySelectorAll('div.sc-jOdwRd').forEach(card => {
+                    card.dataset.fbcsProcessed = '0';
+                    processCard(card);
+                });
+            }, 50);
         });
         observer.observe(document.body, { childList: true, subtree: true });
-        document.querySelectorAll('div.sc-jOdwRd').forEach(processCard);
+        document.querySelectorAll('div.sc-jOdwRd').forEach(card => {
+            card.dataset.fbcsProcessed = '0';
+            processCard(card);
+        });
     }
 
     function extractItems(data) {
