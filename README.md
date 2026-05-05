@@ -1,5 +1,7 @@
 **Расширение для браузеров на базе Chromium (Chrome, Edge, Яндекс.Браузер, Kiwi на Android и др.)**
 
+_*Версии для Safari (MacOS/iOS), и универсальная для Tampermonkey (Win/Mac/Linux/Android) находятся в соответствующих ветках_        
+
 **Установка:**
     
 • Скачайте архив с расширением из этой ветки (FBCS-BB-for-Chrome).    
