@@ -1,7 +1,7 @@
 Универсальная версия FBCS-BB для Tampermonkey    
 
 Подходит для любого браузера, где можно установить Tampermonkey:    
-Firefox, Edge, Chrome, Kiwi, Yandex и другие.    
+Firefox, Edge, Chrome, Kiwi, Yandex и другие. в т.ч. на Android. 
 
 📥 Установка Tampermonkey    
 Если у вас ещё нет расширения Tampermonkey, установите его из магазина вашего браузера:    
